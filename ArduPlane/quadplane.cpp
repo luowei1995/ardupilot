@@ -313,6 +313,12 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @Increment: 0.25
     // @User: Standard
     AP_GROUPINFO("VFWD_ALT", 43, QuadPlane, vel_forward_alt_cutoff,  0),
+
+    // @Param: TILT_TYPE
+    // @DisplayName: Tiltrotor type
+    // @Description: This is the type of tiltrotor when TILT_MASK is non-zero. A continuous tiltrotor can tilt the rotors to any angle on demand. A binary tiltrotor assumes a retract style servo where the servo is either fully forward or fully up. In both cases the servo can't move faster than Q_TILT_RATE
+    // @Values: 0:Continuous,1:Binary
+    AP_GROUPINFO("TILT_TYPE", 44, QuadPlane, tilt.tilt_type, TILT_TYPE_CONTINUOUS),
     
     AP_GROUPEND
 };
