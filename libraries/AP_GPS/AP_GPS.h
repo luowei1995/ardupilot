@@ -370,6 +370,9 @@ private:
 
         // the time we got our last fix in system milliseconds
         uint32_t last_message_time_ms;
+
+        // estimate of the offset between GPS time and system clock
+        uint64_t gps_ms_offset;
     };
     GPS_timing timing[GPS_MAX_INSTANCES];
     GPS_State state[GPS_MAX_INSTANCES];
@@ -437,6 +440,9 @@ private:
 
     // ibject data into all backends
     void inject_data_all(const uint8_t *data, uint16_t len);
+
+    // estimate last_fix_time_ms
+    void estimate_fix_time(uint8_t instance, uint32_t now);
 };
 
 #define GPS_BAUD_TIME_MS 1200
