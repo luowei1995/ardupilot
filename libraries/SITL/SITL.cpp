@@ -83,6 +83,7 @@ const AP_Param::GroupInfo SITL::var_info[] = {
     AP_GROUPINFO("PIN_MASK",      50, SITL,  pin_mask, 0),
     AP_GROUPINFO("ADSB_TX",       51, SITL,  adsb_tx, 0),
     AP_GROUPINFO("SPEEDUP",       52, SITL,  speedup, -1),
+    AP_GROUPINFO("GPS_JITTER",    53, SITL,  gps_timing_jitter, 0),
     AP_GROUPEND
 };
 

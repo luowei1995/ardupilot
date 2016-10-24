@@ -93,6 +93,7 @@ public:
     AP_Int8  gps_numsats; // number of visible satellites
     AP_Vector3f  gps_glitch;  // glitch offsets in lat, lon and altitude
     AP_Int8  gps_hertz;   // GPS update rate in Hz
+    AP_Int16 gps_timing_jitter; // GPS UART timing jitter
     AP_Float batt_voltage; // battery voltage base
     AP_Float accel_fail;  // accelerometer failure value
     AP_Int8  rc_fail;     // fail RC input
