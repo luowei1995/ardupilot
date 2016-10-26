@@ -1,4 +1,3 @@
-// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -168,7 +167,7 @@ public:
     // level of nesting, so the first level of nesting gets 6 bits the 2nd
     // level gets the next 6 bits, and the 3rd level gets the last 6
     // bits. This limits groups to having at most 64 elements.
-    static uint32_t group_id(const struct GroupInfo *grpinfo, uint8_t base, uint8_t i, uint8_t shift);
+    static uint32_t group_id(const struct GroupInfo *grpinfo, uint32_t base, uint8_t i, uint8_t shift);
     
     /// Copy the variable's name, prefixed by any containing group name, to a
     /// buffer.
@@ -346,7 +345,9 @@ public:
 
     // count of parameters in tree
     static uint16_t count_parameters(void);
-    
+
+    static void set_hide_disabled_groups(bool value) { _hide_disabled_groups = value; }
+
 private:
     /// EEPROM header
     ///
@@ -418,7 +419,7 @@ private:
                                     struct Param_header phdr, void **ptr,
                                     uint16_t vindex,
                                     const struct GroupInfo *group_info,
-                                    uint8_t group_base,
+                                    uint32_t group_base,
                                     uint8_t group_shift,
                                     ptrdiff_t group_offset);
     static const struct Info *  find_by_header(
@@ -450,7 +451,7 @@ private:
                                     uint16_t vindex, 
                                     const struct GroupInfo *group_info,
                                     bool *found_current,
-                                    uint8_t group_base,
+                                    uint32_t group_base,
                                     uint8_t group_shift,
                                     ptrdiff_t group_offset,
                                     ParamToken *token,
@@ -494,6 +495,8 @@ private:
     static const uint8_t        k_EEPROM_magic0      = 0x50;
     static const uint8_t        k_EEPROM_magic1      = 0x41; ///< "AP"
     static const uint8_t        k_EEPROM_revision    = 6; ///< current format revision
+
+    static bool _hide_disabled_groups;
 };
 
 /// Template class for scalar variables.

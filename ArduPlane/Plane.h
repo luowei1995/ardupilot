@@ -1,4 +1,3 @@
-/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
    Lead developer: Andrew Tridgell & Tom Pittenger
 
@@ -230,6 +229,7 @@ private:
         uint32_t last_correction_time_ms;
         uint8_t in_range_count;
         float height_estimate;
+        float last_distance;
     } rangefinder_state;
 #endif
 
