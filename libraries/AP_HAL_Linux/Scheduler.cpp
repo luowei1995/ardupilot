@@ -42,6 +42,7 @@ extern const AP_HAL::HAL& hal;
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_ERLEBRAIN2 || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BH || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DARK || \
+    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_URUS || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PXFMINI
 #define APM_LINUX_RCIN_RATE             2000
 #define APM_LINUX_TONEALARM_RATE        100
@@ -66,6 +67,7 @@ Scheduler::Scheduler()
 
 void Scheduler::init()
 {
+    int ret;
     const struct sched_table {
         const char *name;
         SchedulerThread *thread;
@@ -87,11 +89,19 @@ void Scheduler::init()
     }
 
     struct sched_param param = { .sched_priority = APM_LINUX_MAIN_PRIORITY };
-    sched_setscheduler(0, SCHED_FIFO, &param);
+    ret = sched_setscheduler(0, SCHED_FIFO, &param);
+    if (ret == -1) {
+        AP_HAL::panic("Scheduler: failed to set scheduling parameters: %s",
+                      strerror(errno));
+    }
 
     /* set barrier to N + 1 threads: worker threads + main */
     unsigned n_threads = ARRAY_SIZE(sched_table) + 1;
-    pthread_barrier_init(&_initialized_barrier, nullptr, n_threads);
+    ret = pthread_barrier_init(&_initialized_barrier, nullptr, n_threads);
+    if (ret) {
+        AP_HAL::panic("Scheduler: Failed to initialise barrier object: %s",
+                      strerror(ret));
+    }
 
     for (size_t i = 0; i < ARRAY_SIZE(sched_table); i++) {
         const struct sched_table *t = &sched_table[i];
@@ -322,7 +332,7 @@ void Scheduler::_timer_task()
     _timer_semaphore.give();
 
     // and the failsafe, if one is setup
-    if (_failsafe != NULL) {
+    if (_failsafe != nullptr) {
         _failsafe();
     }
 
@@ -454,4 +464,19 @@ bool Scheduler::SchedulerThread::_run()
     _sched._wait_all_threads();
 
     return PeriodicThread::_run();
+}
+
+void Scheduler::teardown()
+{
+    _timer_thread.stop();
+    _io_thread.stop();
+    _rcin_thread.stop();
+    _uart_thread.stop();
+    _tonealarm_thread.stop();
+
+    _timer_thread.join();
+    _io_thread.join();
+    _rcin_thread.join();
+    _uart_thread.join();
+    _tonealarm_thread.join();
 }

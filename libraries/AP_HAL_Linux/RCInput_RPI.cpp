@@ -4,6 +4,7 @@
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_ERLEBRAIN2 ||   \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BH ||           \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DARK ||         \
+    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_URUS ||         \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PXFMINI
 #include <assert.h>
 #include <errno.h>
@@ -149,7 +150,7 @@ Memory_table::~Memory_table()
 void* Memory_table::get_page(void** const pages, uint32_t addr) const
 {
     if (addr >= PAGE_SIZE * _page_count) {
-        return NULL;   
+        return nullptr;
     }
     return (uint8_t*)pages[(uint32_t) addr / 4096] + addr % 4096;
 }
@@ -165,7 +166,7 @@ void* Memory_table::get_virt_addr(const uint32_t phys_addr) const
             return (void*) ((uintptr_t) _virt_pages[i] + (phys_addr & 0xFFF));
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 // FIXME: in-congruent function style see above
@@ -220,9 +221,9 @@ void* RCInput_RPI::map_peripheral(uint32_t base, uint32_t len)
 
     if (fd < 0) {
         printf("Failed to open /dev/mem: %m\n");
-        return NULL;
+        return nullptr;
     }
-    vaddr = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
+    vaddr = mmap(nullptr, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base);
     if (vaddr == MAP_FAILED) {
         printf("rpio-pwm: Failed to map peripheral at 0x%08x: %m\n", base);
     }
@@ -378,7 +379,9 @@ void RCInput_RPI::init_DMA()
 void RCInput_RPI::set_sigaction()
 {
     for (int i = 0; i < NSIG; i++) {
-        //catch all signals (like ctrl+c, ctrl+z, ...) to ensure DMA is disabled
+        // catch all signals to ensure DMA is disabled - some of them may
+        // already be handled elsewhere in cases we consider normal
+        // termination. In those cases the teardown() method must be called.
         struct sigaction sa, sa_old;
         memset(&sa, 0, sizeof(sa));
         sigaction(i, nullptr, &sa_old);
@@ -420,7 +423,7 @@ RCInput_RPI::~RCInput_RPI()
     delete con_blocks;
 }
 
-void RCInput_RPI::deinit()
+void RCInput_RPI::teardown()
 {
     stop_dma();
 }
@@ -471,7 +474,7 @@ void RCInput_RPI::_timer_tick()
     dma_cb_t* ad = (dma_cb_t*) con_blocks->get_virt_addr(dma_reg[RCIN_RPI_DMA_CONBLK_AD | RCIN_RPI_DMA_CHANNEL << 8]);
     for(j = 1; j >= -1; j--){
     x = circle_buffer->get_virt_addr((ad + j)->dst);
-    if(x != NULL) {
+    if(x != nullptr) {
         break;}
     }
     

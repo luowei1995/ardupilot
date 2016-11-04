@@ -318,6 +318,64 @@ const AP_Param::GroupInfo AP_InertialSensor::var_info[] = {
     // @User: Advanced
     // @Values: 1:IMU 1,2:IMU 2,3:IMU 3
     AP_GROUPINFO("ACC_BODYFIX", 26, AP_InertialSensor, _acc_body_aligned, 2),
+
+    // @Param: POS1_X
+    // @DisplayName: IMU accelerometer X position
+    // @Description: X position of the first IMU Accelerometer in body frame. Positive X is forward of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS1_Y
+    // @DisplayName: IMU accelerometer Y position
+    // @Description: Y position of the first IMU accelerometer in body frame. Positive Y is to the right of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS1_Z
+    // @DisplayName: IMU accelerometer Z position
+    // @Description: Z position of the first IMU accelerometer in body frame. Positive Z is down from the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("POS1", 27, AP_InertialSensor, _accel_pos[0], 0.0f),
+
+    // @Param: POS2_X
+    // @DisplayName: IMU accelerometer X position
+    // @Description: X position of the second IMU accelerometer in body frame. Positive X is forward of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS2_Y
+    // @DisplayName: IMU accelerometer Y position
+    // @Description: Y position of the second IMU accelerometer in body frame. Positive Y is to the right of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS2_Z
+    // @DisplayName: IMU accelerometer Z position
+    // @Description: Z position of the second IMU accelerometer in body frame. Positive Z is down from the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("POS2", 28, AP_InertialSensor, _accel_pos[1], 0.0f),
+
+    // @Param: POS3_X
+    // @DisplayName: IMU accelerometer X position
+    // @Description: X position of the third IMU accelerometer in body frame. Positive X is forward of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS3_Y
+    // @DisplayName: IMU accelerometer Y position
+    // @Description: Y position of the third IMU accelerometer in body frame. Positive Y is to the right of the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS3_Z
+    // @DisplayName: IMU accelerometer Z position
+    // @Description: Z position of the third IMU accelerometer in body frame. Positive Z is down from the origin. Attention: The IMU should be located as close to the vehicle c.g. as practical so that the value of this parameter is minimised. Failure to do so can result in noisy navigation velocity measurements due to vibration and IMU gyro noise. If the IMU cannot be moved and velocity noise is a problem, a location closer to the IMU can be used as the body frame origin.
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("POS3", 29, AP_InertialSensor, _accel_pos[2], 0.0f),
+
     /*
       NOTE: parameter indexes have gaps above. When adding new
       parameters check for conflicts carefully
@@ -341,7 +399,7 @@ AP_InertialSensor::AP_InertialSensor() :
     _calibrating(false),
     _log_raw_data(false),
     _backends_detected(false),
-    _dataflash(NULL),
+    _dataflash(nullptr),
     _accel_cal_requires_reboot(false),
     _startup_error_counts_set(false),
     _startup_ms(0)
@@ -352,7 +410,7 @@ AP_InertialSensor::AP_InertialSensor() :
     _s_instance = this;
     AP_Param::setup_object_defaults(this, var_info);
     for (uint8_t i=0; i<INS_MAX_BACKENDS; i++) {
-        _backends[i] = NULL;
+        _backends[i] = nullptr;
     }
     for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
         _accel_error_count[i] = 0;
@@ -1267,8 +1325,8 @@ AuxiliaryBus *AP_InertialSensor::get_auxiliary_bus(int16_t backend_id, uint8_t i
     detect_backends();
 
     AP_InertialSensor_Backend *backend = _find_backend(backend_id, instance);
-    if (backend == NULL)
-        return NULL;
+    if (backend == nullptr)
+        return nullptr;
 
     return backend->get_auxiliary_bus();
 }
@@ -1341,10 +1399,10 @@ bool AP_InertialSensor::is_still()
 void AP_InertialSensor::acal_init()
 {
     // NOTE: these objects are never deallocated because the pre-arm checks force a reboot
-    if (_acal == NULL) {
+    if (_acal == nullptr) {
         _acal = new AP_AccelCal;
     }
-    if (_accel_calibrator == NULL) {
+    if (_accel_calibrator == nullptr) {
         _accel_calibrator = new AccelCalibrator[INS_MAX_INSTANCES];
     }
 }
@@ -1352,7 +1410,7 @@ void AP_InertialSensor::acal_init()
 // update accel calibrator
 void AP_InertialSensor::acal_update()
 {
-    if(_acal == NULL) {
+    if(_acal == nullptr) {
         return;
     }
 

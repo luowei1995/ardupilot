@@ -92,6 +92,7 @@ public:
     AP_Int8  _ground_clearance_cm[RANGEFINDER_MAX_INSTANCES];
     AP_Int8  _address[RANGEFINDER_MAX_INSTANCES];
     AP_Int16 _powersave_range;
+    AP_Vector3f _pos_offset[RANGEFINDER_MAX_INSTANCES]; // position offset in body frame
 
     static const struct AP_Param::GroupInfo var_info[];
     
@@ -112,6 +113,10 @@ public:
 
 #define _RangeFinder_STATE(instance) state[instance]
 
+    uint8_t get_primary(void) const {
+        return primary_instance;
+    }
+    
     uint16_t distance_cm(uint8_t instance) const {
         return (instance<num_instances? _RangeFinder_STATE(instance).distance_cm : 0);
     }
@@ -180,6 +185,14 @@ public:
       the min and 2m can be captured
      */
     bool pre_arm_check() const;
+
+    // return a 3D vector defining the position offset of the sensor in metres relative to the body frame origin
+    const Vector3f &get_pos_offset(uint8_t instance) const {
+        return _pos_offset[instance];
+    }
+    const Vector3f &get_pos_offset(void) const {
+        return _pos_offset[primary_instance];
+    }
 
 private:
     RangeFinder_State state[RANGEFINDER_MAX_INSTANCES];

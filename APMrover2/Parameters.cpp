@@ -553,9 +553,27 @@ const AP_Param::Info Rover::var_info[] = {
     // @Group: BTN_
     // @Path: ../libraries/AP_Button/AP_Button.cpp
     GOBJECT(button, "BTN_",  AP_Button),
-    
+
+    // @Group:
+    // @Path: Parameters.cpp
+    GOBJECT(g2, "",  ParametersG2),
+
 	AP_VAREND
 };
+
+/*
+  2nd group of parameters
+ */
+const AP_Param::GroupInfo ParametersG2::var_info[] = {
+
+    // @Group: STAT
+    // @Path: ../libraries/AP_Stats/AP_Stats.cpp
+    AP_SUBGROUPINFO(stats, "STAT", 1, ParametersG2, AP_Stats),
+
+    AP_GROUPEND
+};
+
+
 
 /*
   This is a conversion table from old parameter values to new

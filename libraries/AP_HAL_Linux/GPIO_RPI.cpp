@@ -6,6 +6,7 @@
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BH || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_DARK || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIO2 || \
+    CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_URUS || \
     CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_PXFMINI
 
 #include <errno.h>
@@ -54,7 +55,7 @@ void GPIO_RPI::init()
 
     // mmap GPIO
     void *gpio_map = mmap(
-        NULL,                 // Any adddress in our space will do
+        nullptr,              // Any adddress in our space will do
         BLOCK_SIZE,           // Map length
         PROT_READ|PROT_WRITE, // Enable reading & writting to mapped memory
         MAP_SHARED,           // Shared with other processes

@@ -82,7 +82,17 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(dataflash_periodic,     50,    400),
     SCHED_TASK(avoidance_adsb_update,  10,    100),
     SCHED_TASK(button_update,           5,    100),
+    SCHED_TASK(stats_update,            1,    100),
 };
+
+/*
+  update AP_Stats
+ */
+void Plane::stats_update(void)
+{
+    g2.stats.update();
+}
+
 
 void Plane::setup() 
 {
@@ -226,7 +236,7 @@ void Plane::update_compass(void)
             DataFlash.Log_Write_Compass(compass);
         }
     } else {
-        ahrs.set_compass(NULL);
+        ahrs.set_compass(nullptr);
     }
 }
 
@@ -347,6 +357,12 @@ void Plane::one_second_loop()
             // reset the landing altitude correction
             auto_state.land_alt_offset = 0;
     }
+    
+    // update error mask of sensors and subsystems. The mask uses the
+    // MAV_SYS_STATUS_* values from mavlink. If a bit is set then it
+    // indicates that the sensor or subsystem is present but not
+    // functioning correctly
+    update_sensor_status_flags();
 }
 
 void Plane::log_perf_info()
@@ -1016,7 +1032,8 @@ void Plane::update_optical_flow(void)
         uint8_t flowQuality = optflow.quality();
         Vector2f flowRate = optflow.flowRate();
         Vector2f bodyRate = optflow.bodyRate();
-        ahrs.writeOptFlowMeas(flowQuality, flowRate, bodyRate, last_of_update);
+        const Vector3f &posOffset = optflow.get_pos_offset();
+        ahrs.writeOptFlowMeas(flowQuality, flowRate, bodyRate, last_of_update, posOffset);
         Log_Write_Optflow();
     }
 }

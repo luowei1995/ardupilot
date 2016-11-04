@@ -75,7 +75,17 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK(accel_cal_update,       10,    100),
     SCHED_TASK(dataflash_periodic,     50,    300),
     SCHED_TASK(button_update,          5,     100),
+    SCHED_TASK(stats_update,           1,     100),
 };
+
+/*
+  update AP_Stats
+*/
+void Rover::stats_update(void)
+{
+    g2.stats.set_flying(motor_active());
+    g2.stats.update();
+}
 
 /*
   setup is called when the sketch starts
@@ -233,7 +243,7 @@ void Rover::update_compass(void)
             DataFlash.Log_Write_Compass(compass);
         }
     } else {
-        ahrs.set_compass(NULL);
+        ahrs.set_compass(nullptr);
     }
 }
 
@@ -330,6 +340,12 @@ void Rover::one_second_loop(void)
     }
 
     ins.set_raw_logging(should_log(MASK_LOG_IMU_RAW));
+    
+    // update error mask of sensors and subsystems. The mask uses the
+    // MAV_SYS_STATUS_* values from mavlink. If a bit is set then it
+    // indicates that the sensor or subsystem is present but not
+    // functioning correctly
+    update_sensor_status_flags();
 }
 
 void Rover::dataflash_periodic(void)

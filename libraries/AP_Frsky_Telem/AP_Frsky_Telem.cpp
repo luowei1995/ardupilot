@@ -43,25 +43,24 @@ void AP_Frsky_Telem::init(const AP_SerialManager &serial_manager, const char *fi
         _protocol = AP_SerialManager::SerialProtocol_FrSky_SPort; // FrSky SPort protocol (X-receivers)
     } else if ((_port = serial_manager.find_serial(AP_SerialManager::SerialProtocol_FrSky_SPort_Passthrough, 0))) {
         _protocol = AP_SerialManager::SerialProtocol_FrSky_SPort_Passthrough; // FrSky SPort and SPort Passthrough (OpenTX) protocols (X-receivers)
-
+        // add firmware and frame info to message queue
+        queue_message(MAV_SEVERITY_INFO, firmware_str);
         // save main parameters locally
         _params.mav_type = mav_type; // frame type (see MAV_TYPE in Mavlink definition file common.h)
         _params.fs_batt_voltage = fs_batt_voltage; // failsafe battery voltage in volts
         _params.fs_batt_mah = fs_batt_mah; // failsafe reserve capacity in mAh
         if (ap_valuep == nullptr) { // ap bit-field
+            _ap.value = 0x2000; // set "initialised" to 1 for rover and plane
             _ap.valuep = &_ap.value;
         } else {
             _ap.valuep = ap_valuep;
         }
     }
     
-    if (_port != NULL) {
+    if (_port != nullptr) {
         hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_Frsky_Telem::tick, void));
         // we don't want flow control for either protocol
         _port->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
-
-        // add firmware and frame info to message queue
-        queue_message(MAV_SEVERITY_INFO, firmware_str);
     }
 }
 
@@ -113,8 +112,10 @@ void AP_Frsky_Telem::send_SPort_Passthrough(void)
                 _passthrough.params_timer = AP_HAL::millis();
                 return;
             } else if ((now - _passthrough.ap_status_timer) > 500) {
-                send_uint32(DIY_FIRST_ID+1, calc_ap_status());
-                _passthrough.ap_status_timer = AP_HAL::millis();
+                if ((*_ap.valuep & AP_INITIALIZED_FLAG) > 0) {  // send ap status only once vehicle has been initialised
+                    send_uint32(DIY_FIRST_ID+1, calc_ap_status());
+                    _passthrough.ap_status_timer = AP_HAL::millis();
+                }
                 return;
             } else if ((now - _passthrough.batt_timer) > 1000) {
                 send_uint32(DIY_FIRST_ID+3, calc_batt());
@@ -683,8 +684,8 @@ uint32_t AP_Frsky_Telem::calc_ap_status(void)
     ap_status = (uint8_t)((_ap.control_mode+1) & AP_CONTROL_MODE_LIMIT);
     // simple/super simple modes flags
     ap_status |= (uint8_t)(*_ap.valuep & AP_SSIMPLE_FLAGS)<<AP_SSIMPLE_OFFSET;
-    // is_flying flag
-    ap_status |= (uint8_t)((*_ap.valuep & AP_ISFLYING_FLAG) ^ AP_ISFLYING_FLAG);
+    // is_flying flag which is the inverse of the land_complete flag
+    ap_status |= (uint8_t)((*_ap.valuep & AP_LANDCOMPLETE_FLAG) ^ AP_LANDCOMPLETE_FLAG);
     // armed flag
     ap_status |= (uint8_t)(AP_Notify::flags.armed)<<AP_ARMED_OFFSET;
     // battery failsafe flag
@@ -735,15 +736,14 @@ uint32_t AP_Frsky_Telem::calc_velandyaw(void)
 
     // if we can't get velocity then we use zero for vertical velocity
     _ahrs.get_velocity_NED(velNED);
-
     // vertical velocity in dm/s
     velandyaw = prep_number(roundf(velNED.z * 10), 2, 1);
-    // horizontal velocity in dm/s (use airspeed if available, otherwise use groundspeed)
-    float airspeed;
-    if (_ahrs.airspeed_estimate_true(&airspeed)) {
-        velandyaw |= prep_number(roundf(airspeed * 10), 2, 1)<<VELANDYAW_XYVEL_OFFSET;
-    } else {
-        velandyaw |= prep_number(roundf(_ahrs.groundspeed_vector().length() * 10), 2, 1)<<VELANDYAW_XYVEL_OFFSET;
+    // horizontal velocity in dm/s (use airspeed if available and enabled - even if not used - otherwise use groundspeed)
+    const AP_Airspeed *aspeed = _ahrs.get_airspeed();
+    if (aspeed && aspeed->enabled()) {        
+        velandyaw |= prep_number(roundf(aspeed->get_airspeed() * 10), 2, 1)<<VELANDYAW_XYVEL_OFFSET;
+    } else { // otherwise send groundspeed estimate from ahrs
+        velandyaw |= prep_number(roundf(_ahrs.groundspeed() * 10), 2, 1)<<VELANDYAW_XYVEL_OFFSET;
     }
     // yaw from [0;36000] centidegrees to .2 degree increments [0;1800] (just in case, limit to 2047 (0x7FF) since the value is stored on 11 bits)
     velandyaw |= ((uint16_t)roundf(_ahrs.yaw_sensor * 0.05f) & VELANDYAW_YAW_LIMIT)<<VELANDYAW_YAW_OFFSET;
@@ -910,8 +910,8 @@ void AP_Frsky_Telem::calc_gps_position(void)
 void AP_Frsky_Telem::set_is_flying(bool is_flying)
 {
     if (is_flying) {
-        _ap.value |= AP_ISFLYING_FLAG;
+        _ap.value &= ~AP_LANDCOMPLETE_FLAG; // set land_complete flag to 0
     } else {
-        _ap.value &= ~AP_ISFLYING_FLAG;
+        _ap.value |= AP_LANDCOMPLETE_FLAG; // set land_complete flag to 1
     }
 }

@@ -44,6 +44,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: GPS type
     // @Values: 0:None,1:AUTO,2:uBlox,3:MTK,4:MTK19,5:NMEA,6:SiRF,7:HIL,8:SwiftNav,9:PX4-UAVCAN,10:SBF,11:GSOF,12:QURT,13:ERB,14:MAV,15:NOVA
     // @RebootRequired: True
+    // @User: Advanced
     AP_GROUPINFO("TYPE",    0, AP_GPS, _type[0], 1),
 
     // @Param: TYPE2
@@ -51,12 +52,14 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: GPS type of 2nd GPS
     // @Values: 0:None,1:AUTO,2:uBlox,3:MTK,4:MTK19,5:NMEA,6:SiRF,7:HIL,8:SwiftNav,9:PX4-UAVCAN,10:SBF,11:GSOF
     // @RebootRequired: True
+    // @User: Advanced
     AP_GROUPINFO("TYPE2",   1, AP_GPS, _type[1], 0),
 
     // @Param: NAVFILTER
     // @DisplayName: Navigation filter setting
     // @Description: Navigation filter engine setting
     // @Values: 0:Portable,2:Stationary,3:Pedestrian,4:Automotive,5:Sea,6:Airborne1G,7:Airborne2G,8:Airborne4G
+    // @User: Advanced
     AP_GROUPINFO("NAVFILTER", 2, AP_GPS, _navfilter, GPS_ENGINE_AIRBORNE_4G),
 
     // @Param: AUTO_SWITCH
@@ -93,6 +96,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @DisplayName: Destination for GPS_INJECT_DATA MAVLink packets
     // @Description: The GGS can send raw serial packets to inject data to multiple GPSes.
     // @Values: 0:send to first GPS,1:send to 2nd GPS,127:send to all
+    // @User: Advanced
     AP_GROUPINFO("INJECT_TO",   7, AP_GPS, _inject_to, GPS_RTK_INJECT_TO_ALL),
 
     // @Param: SBP_LOGMASK
@@ -107,6 +111,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: Enable logging of RXM raw data from uBlox which includes carrier phase and pseudo range information. This allows for post processing of dataflash logs for more precise positioning. Note that this requires a raw capable uBlox such as the 6P or 6T.
     // @Values: 0:Disabled,1:log every sample,5:log every 5 samples
     // @RebootRequired: True
+    // @User: Advanced
     AP_GROUPINFO("RAW_DATA", 9, AP_GPS, _raw_data, 0),
 
     // @Param: GNSS_MODE
@@ -153,6 +158,44 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("RATE_MS2", 15, AP_GPS, _rate_ms[1], 200),
 
+    // @Param: POS1_X
+    // @DisplayName: Antenna X position offset
+    // @Description: X position of the first GPS antenna in body frame. Positive X is forward of the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS1_Y
+    // @DisplayName: Antenna Y position offset
+    // @Description: Y position of the first GPS antenna in body frame. Positive Y is to the right of the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS1_Z
+    // @DisplayName: Antenna Z position offset
+    // @Description: Z position of the first GPS antenna in body frame. Positive Z is down from the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("POS1", 16, AP_GPS, _antenna_offset[0], 0.0f),
+
+    // @Param: POS2_X
+    // @DisplayName: Antenna X position offset
+    // @Description: X position of the second GPS antenna in body frame. Positive X is forward of the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS2_Y
+    // @DisplayName: Antenna Y position offset
+    // @Description: Y position of the second GPS antenna in body frame. Positive Y is to the right of the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+
+    // @Param: POS2_Z
+    // @DisplayName: Antenna Z position offset
+    // @Description: Z position of the second GPS antenna in body frame. Positive Z is down from the origin. Use antenna phase centroid location if provided by the manufacturer.
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("POS2", 17, AP_GPS, _antenna_offset[1], 0.0f),
+
     AP_GROUPEND
 };
 
@@ -192,7 +235,7 @@ void AP_GPS::send_blob_start(uint8_t instance, const char *_blob, uint16_t size)
 void AP_GPS::send_blob_update(uint8_t instance)
 {
     // exit immediately if no uart for this instance
-    if (_port[instance] == NULL) {
+    if (_port[instance] == nullptr) {
         return;
     }
 
@@ -219,7 +262,7 @@ void AP_GPS::send_blob_update(uint8_t instance)
 void
 AP_GPS::detect_instance(uint8_t instance)
 {
-    AP_GPS_Backend *new_gps = NULL;
+    AP_GPS_Backend *new_gps = nullptr;
     struct detect_state *dstate = &detect_state[instance];
     uint32_t now = AP_HAL::millis();
 
@@ -240,8 +283,16 @@ AP_GPS::detect_instance(uint8_t instance)
         goto found_gps;
     }
 #endif
-    
-    if (_port[instance] == NULL) {
+
+    // user has to explicitly set the MAV type, do not use AUTO
+    // do not try to detect the MAV type, assume it's there
+    if (_type[instance] == GPS_TYPE_MAV) {
+        _broadcast_gps_type("MAV", instance, -1);
+        new_gps = new AP_GPS_MAV(*this, state[instance], nullptr);
+        goto found_gps;
+    }
+
+    if (_port[instance] == nullptr) {
         // UART not available
         return;
     }
@@ -291,7 +342,7 @@ AP_GPS::detect_instance(uint8_t instance)
     }
 
     while (initblob_state[instance].remaining == 0 && _port[instance]->available() > 0
-            && new_gps == NULL) {
+            && new_gps == nullptr) {
         uint8_t data = _port[instance]->read();
         /*
           running a uBlox at less than 38400 will lead to packet
@@ -332,12 +383,6 @@ AP_GPS::detect_instance(uint8_t instance)
             _broadcast_gps_type("ERB", instance, dstate->current_baud);
             new_gps = new AP_GPS_ERB(*this, state[instance], _port[instance]);
         }
-        // user has to explicitly set the MAV type, do not use AUTO
-        // Do not try to detect the MAV type, assume it's there
-        else if (_type[instance] == GPS_TYPE_MAV) {
-            _broadcast_gps_type("MAV", instance, dstate->current_baud);
-            new_gps = new AP_GPS_MAV(*this, state[instance], NULL);
-        }
 		else if (now - dstate->detect_started_ms > (ARRAY_SIZE(_baudrates) * GPS_BAUD_TIME_MS)) {
 			// prevent false detection of NMEA mode in
 			// a MTK or UBLOX which has booted in NMEA mode
@@ -349,10 +394,8 @@ AP_GPS::detect_instance(uint8_t instance)
 		}
 	}
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_QURT
 found_gps:
-#endif
-	if (new_gps != NULL) {
+	if (new_gps != nullptr) {
         state[instance].status = NO_FIX;
         drivers[instance] = new_gps;
         timing[instance].last_message_time_ms = now;
@@ -362,7 +405,7 @@ found_gps:
 AP_GPS::GPS_Status 
 AP_GPS::highest_supported_status(uint8_t instance) const
 {
-    if (drivers[instance] != NULL)
+    if (drivers[instance] != nullptr)
         return drivers[instance]->highest_supported_status();
     return AP_GPS::GPS_OK_FIX_3D;
 }
@@ -370,7 +413,7 @@ AP_GPS::highest_supported_status(uint8_t instance) const
 AP_GPS::GPS_Status 
 AP_GPS::highest_supported_status(void) const
 {
-    if (drivers[primary_instance] != NULL)
+    if (drivers[primary_instance] != nullptr)
         return drivers[primary_instance]->highest_supported_status();
     return AP_GPS::GPS_OK_FIX_3D;
 }
@@ -397,7 +440,7 @@ AP_GPS::update_instance(uint8_t instance)
         return;
     }
 
-    if (drivers[instance] == NULL || state[instance].status == NO_GPS) {
+    if (drivers[instance] == nullptr || state[instance].status == NO_GPS) {
         // we don't yet know the GPS type of this one, or it has timed
         // out and needs to be re-initialised
         detect_instance(instance);
@@ -420,7 +463,7 @@ AP_GPS::update_instance(uint8_t instance)
             // free the driver before we run the next detection, so we
             // don't end up with two allocated at any time
             delete drivers[instance];
-            drivers[instance] = NULL;
+            drivers[instance] = nullptr;
             memset(&state[instance], 0, sizeof(state[instance]));
             state[instance].instance = instance;
             state[instance].status = NO_GPS;
@@ -501,7 +544,7 @@ AP_GPS::handle_msg(const mavlink_message_t *msg)
     }
     uint8_t i;
     for (i=0; i<num_instances; i++) {
-        if ((drivers[i] != NULL) && (_type[i] != GPS_TYPE_NONE)) {
+        if ((drivers[i] != nullptr) && (_type[i] != GPS_TYPE_NONE)) {
             drivers[i]->handle_msg(msg);
         }
     }
@@ -591,7 +634,7 @@ AP_GPS::inject_data(uint8_t *data, uint8_t len)
 void 
 AP_GPS::inject_data(uint8_t instance, uint8_t *data, uint8_t len)
 {
-    if (instance < GPS_MAX_INSTANCES && drivers[instance] != NULL)
+    if (instance < GPS_MAX_INSTANCES && drivers[instance] != nullptr)
         drivers[instance]->inject_data(data, len);
 }  
 
@@ -661,7 +704,7 @@ AP_GPS::send_mavlink_gps2_raw(mavlink_channel_t chan)
 void 
 AP_GPS::send_mavlink_gps_rtk(mavlink_channel_t chan)
 {
-    if (drivers[0] != NULL && drivers[0]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
+    if (drivers[0] != nullptr && drivers[0]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
         drivers[0]->send_mavlink_gps_rtk(chan);
     }
 }
@@ -669,7 +712,7 @@ AP_GPS::send_mavlink_gps_rtk(mavlink_channel_t chan)
 void 
 AP_GPS::send_mavlink_gps2_rtk(mavlink_channel_t chan)
 {
-    if (drivers[1] != NULL && drivers[1]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
+    if (drivers[1] != nullptr && drivers[1]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
         drivers[1]->send_mavlink_gps_rtk(chan);
     }
 }
@@ -678,7 +721,7 @@ uint8_t
 AP_GPS::first_unconfigured_gps(void) const
 {
     for(int i = 0; i < GPS_MAX_INSTANCES; i++) {
-        if(_type[i] != GPS_TYPE_NONE && (drivers[i] == NULL || !drivers[i]->is_configured())) {
+        if(_type[i] != GPS_TYPE_NONE && (drivers[i] == nullptr || !drivers[i]->is_configured())) {
             return i;
         }
     }
@@ -688,7 +731,7 @@ AP_GPS::first_unconfigured_gps(void) const
 void
 AP_GPS::broadcast_first_configuration_failure_reason(void) const {
     uint8_t unconfigured = first_unconfigured_gps();
-    if (drivers[unconfigured] == NULL) {
+    if (drivers[unconfigured] == nullptr) {
         GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_INFO, "GPS %d: was not found", unconfigured + 1);
     } else {
         drivers[unconfigured]->broadcast_configuration_failure_reason();
@@ -792,7 +835,7 @@ void AP_GPS::inject_data_all(const uint8_t *data, uint16_t len)
 {
     uint8_t i;
     for (i=0; i<num_instances; i++) {
-        if ((drivers[i] != NULL) && (_type[i] != GPS_TYPE_NONE)) {
+        if ((drivers[i] != nullptr) && (_type[i] != GPS_TYPE_NONE)) {
             drivers[i]->inject_data(data, len);
         }
     }
