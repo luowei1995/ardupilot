@@ -10,11 +10,11 @@
 
 #define PX4_SCHEDULER_MAX_TIMER_PROCS 8
 
-#define APM_MAIN_PRIORITY_BOOST 241
+#define APM_MAIN_PRIORITY_BOOST 180
 #define APM_MAIN_PRIORITY       180
 #define APM_TIMER_PRIORITY      181
-#define APM_SPI_PRIORITY        242
-#define APM_I2C_PRIORITY        178
+#define APM_SPI_PRIORITY        179
+#define APM_I2C_PRIORITY        177
 #define APM_UART_PRIORITY        60
 #define APM_STORAGE_PRIORITY     59
 #define APM_IO_PRIORITY          58
@@ -35,7 +35,7 @@
    temporarily runs at a priority higher than hpwork and the timer
    thread, which results in much more consistent loop timing. 
 */
-#define APM_MAIN_PRIORITY_BOOST_USEC 150
+#define APM_MAIN_PRIORITY_BOOST_USEC 500
 
 #define APM_MAIN_THREAD_STACK_SIZE 8192
 
