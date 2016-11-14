@@ -308,7 +308,7 @@ bool AP_Compass_LSM303D::_hardware_init()
     uint8_t tries;
     for (tries = 0; tries < 5; tries++) {
         // ensure the chip doesn't interpret any other bus traffic as I2C
-        _disable_i2c();
+        //_disable_i2c();
 
         /* enable mag */
         _reg7_expected = REG7_CONT_MODE_M;
