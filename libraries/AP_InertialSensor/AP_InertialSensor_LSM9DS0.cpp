@@ -27,7 +27,7 @@ extern const AP_HAL::HAL &hal;
 #define LSM9DS0_G_WHOAMI    0xD4
 #define LSM9DS0_XM_WHOAMI   0x49
 
-//#define LSM9DS0_DEBUG
+#define LSM9DS0_DEBUG
 
 ////////////////////////////
 // LSM9DS0 Gyro Registers //
@@ -509,7 +509,7 @@ void AP_InertialSensor_LSM9DS0::start(void)
     }
     
     /* start the timer process to read samples */
-    _dev_gyro->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_LSM9DS0::_poll_data, bool));
+    _dev_gyro->register_periodic_callback(1250, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_LSM9DS0::_poll_data, bool));
 }
 
 
