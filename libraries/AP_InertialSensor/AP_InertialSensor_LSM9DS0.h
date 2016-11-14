@@ -1,7 +1,5 @@
 #pragma once
 
-#define LSM9DS0_DEBUG 0
-
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/SPIDevice.h>
 
@@ -11,7 +9,7 @@
 class AP_InertialSensor_LSM9DS0 : public AP_InertialSensor_Backend
 {
 public:
-    virtual ~AP_InertialSensor_LSM9DS0() { }
+    virtual ~AP_InertialSensor_LSM9DS0();
     void start(void) override;
     bool update() override;
 
@@ -25,7 +23,6 @@ private:
     AP_InertialSensor_LSM9DS0(AP_InertialSensor &imu,
                               AP_HAL::OwnPtr<AP_HAL::SPIDevice> dev_gyro,
                               AP_HAL::OwnPtr<AP_HAL::SPIDevice> dev_accel,
-                              int drdy_pin_num_a, int drdy_pin_num_b,
                               enum Rotation rotation_a,
                               enum Rotation rotation_g);
 
@@ -74,10 +71,6 @@ private:
     void _read_data_transaction_a();
     void _read_data_transaction_g();
 
-#if LSM9DS0_DEBUG
-    void        _dump_registers();
-#endif
-
     AP_HAL::OwnPtr<AP_HAL::SPIDevice> _dev_gyro;
     AP_HAL::OwnPtr<AP_HAL::SPIDevice> _dev_accel;
     AP_HAL::Semaphore *_spi_sem;
@@ -88,12 +81,8 @@ private:
      * by reading the status register. It is *strongly* recommended to use
      * data-ready GPIO pins for performance reasons.
      */
-    AP_HAL::DigitalSource * _drdy_pin_a;
-    AP_HAL::DigitalSource * _drdy_pin_g;
     float _gyro_scale;
     float _accel_scale;
-    int _drdy_pin_num_a;
-    int _drdy_pin_num_g;
     uint8_t _gyro_instance;
     uint8_t _accel_instance;
 
@@ -104,5 +93,8 @@ private:
     enum Rotation _rotation_a;
     enum Rotation _rotation_g;
 
+    // buffer for fifo read
+    uint8_t *_fifo_buffer;
+    
     uint8_t _reg_check_counter;
 };
